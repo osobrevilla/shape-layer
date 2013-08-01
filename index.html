@@ -1,19 +1,136 @@
+
+<!DOCTYPE html>
 <html>
   <head>
     <title>Shape Layer</title>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
     <script src="js/jquery-2.0.3.min.js"></script>
     <script src="js/ShapeMap.js"></script>
     <style type="text/css">
-      .ui-shapemap { background: #BBB; height: 70%; width: 70%; }
-    .ui-area { background: rgba(255, 255, 255, 0.4); border: solid 1px rgba(255, 255, 255, 0.3); }
+      body { background: #999;}
+      .ui-shapemap { background: #BBB; height: 800px; width: 800px; }
+      .ui-area { background: rgba(255, 255, 255, 0.4); border: solid 1px rgba(255, 255, 255, 0.3); }
+      .ui-area-link { text-align: center;}
+      .ui-area-button { 
+        position: absolute; 
+        top: 50%; 
+        margin: -11px 0 0 0; 
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAAsCAYAAACKYvPzAAABFElEQVRIx+3Wu0oDQRQG4C8qWAviC2hjJZp3sFYQCQnaWCgqBm0tfQJfRbC08UUstBWUECNeGJsphsHL7iYQgnvgb3bgY4bDzB4hBKOOyUXzajabIU2+XgjNkb8yPrRsFUaL7rJGa7RGx4L+85e/Rif0F/1DNXCMxVGhU2ihh2ss5DerLNpAB88IMVdYHQZtxx2GJAOcVUU7eMnAp/i9UQVto5+BPexVbVTrmyP3sV/qPU1qOx4xBV9xUHrswQy28JiB7zisNEthI+4oBT9wVHVAm8My7hPwM96gylPfLdawhLuIdocdJQMesI6V2JTpYdELXKYdHsXQu4PdiJ7Eo58m6eIcm5gtig6SvP2SG8xP9sv/BfcZf6IBH7doAAAAAElFTkSuQmCC);
+        border:none; 
+        height: 22px;
+        width: 21px;
+        background-color: #EEE;
+        border-radius: 2px;
+      }
+      .ui-area-button-edit { background-position: 0 -24px; margin-left: -25px; }
+      .ui-area-button-del { background-position: 0 0; margin-right: -29px;}
+      
     </style>
     <script type="text/javascript">
-      $(function(){
-        $("#shapemap").ShapeMap();
+          
+      $(function () {
+        var AreaManager = (function (request, doc, view) {
+          var
+          _xhr = null,
+            _getHiperlink = function () {
+              var href = $.trim(prompt('Ingrese la URL (incluir http://)'));
+              if (href) {
+                if (/http\:\/\//.test(href)) {
+                  return href;
+                } else {
+                  alert('La URL ingresada no es válida');
+                }
+              }
+              return false;
+            },
+            _delQuestion = function () {
+              return confirm('¿Seguro que quieres borrar esta área?');
+            },
+            getAreas = function (pageId) {
+              request({
+                url: '/dashboard/api/bvisor/pages/' + pageId + '/areas/' + area.id,
+                type: 'GET',
+                data: {
+                  id: area.id,
+                  shape: area.shape,
+                  href: area.href,
+                  point: area.point
+                },
+                success: function (datos) {}
+              });
+            },
+            updateArea = function (area) {
+              _xhr = request({
+                url: '/dashboard/api/bvisor/pages/' + pageId + '/areas/' + area.id,
+                type: 'PUT',
+                data: {
+                  id: area.id,
+                  shape: area.shape,
+                  href: area.href,
+                  point: area.point
+                },
+                success: function (datos) {}
+              });
+            },
+            addArea = function (area) {
+              _xhr = request({
+                url: '/dashboard/api/bvisor/pages/' + pageId + '/areas',
+                type: 'POST',
+                data: {
+                  id: area.id,
+                  shape: area.shape,
+                  href: area.href,
+                  point: area.point
+                },
+                success: function (datos) {}
+              });
+            },
+            delArea = function (area) {
+              _xhr = request({
+                url: '/dashboard/api/bvisor/areas/' + that.id,
+                type: 'DELETE',
+                success: function (datos) {
+                  area.el.fadeOut(250, function () {
+                    area.destroy();
+                  });
+                }
+              });
+            };
+          return {
+            init: function (mapArea) {
+              this.mapArea = mapArea;
+              this.mapArea.ShapeMap({
+                onCreateArea: function (area) {
+                  var linkArea = new LinkArea(area.point, {
+                    onEdit: function () {
+                      var that,
+                        href = _getHiperlink();
+                      if (href) {
+                        updateArea(this);
+                      }
+                    },
+                    onDelete: function () {
+                      var that = this;
+                      if (_delQuestion()) {
+                        delArea(this);
+                      }
+                    }
+                  });
+                  linkArea.el.appendTo(this.el);
+                  linkArea.init();
+                  this.deleteArea(area);
+                }
+              });
+            },
+            delArea: delArea,
+            updateArea: updateArea
+          }
+        }($.ajax, document));
+        AreaManager.init($("#area"));
       });
     </script>
   </head>
   <body>
-    <div class="ui-shapemap" id="shapemap"></div>
+    <div class="ui-shapemap" id="area"></div>
   </body>
 </html>
